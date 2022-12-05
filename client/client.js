@@ -5,13 +5,20 @@ var service = require('../server/protos/greet_grpc_pb');
 var calc = require('../server/protos/calculator_pb');
 var calcService = require('../server/protos/calculator_grpc_pb');
 
+let fs = require('fs');
+
+let credentials = grpc.credentials.createSsl(
+  fs.readFileSync('../certs/ca.crt'),
+  fs.readFileSync('../certs/client.key'),
+  fs.readFileSync('../certs/client.crt')
+);
+
+let unSafeCredentials = grpc.credentials.createInsecure();
+
 function callGreetings() {
   console.log('Hello I am a gRPC client');
 
-  var client = new service.GreetServiceClient(
-    '127.0.0.1:50051',
-    grpc.credentials.createInsecure()
-  );
+  var client = new service.GreetServiceClient('127.0.0.1:50051', credentials);
 
   var request = new greets.GreetRequest();
 
@@ -33,7 +40,7 @@ function callGreetings() {
 function callSum() {
   var client = new calcService.CalculatorServiceClient(
     'localhost:50051',
-    grpc.credentials.createInsecure()
+    credentials
   );
 
   var sumRequest = new calc.SumRequest();
@@ -57,10 +64,7 @@ function callSum() {
 }
 
 function callGreetManyTimes() {
-  var client = new service.GreetServiceClient(
-    'localhost:50051',
-    grpc.credentials.createInsecure()
-  );
+  var client = new service.GreetServiceClient('localhost:50051', credentials);
 
   var request = new greets.GreetManyTimesRequest();
 
@@ -92,7 +96,7 @@ function callGreetManyTimes() {
 function callPrimeNumberDecomposition() {
   var client = new calcService.CalculatorServiceClient(
     'localhost:50051',
-    grpc.credentials.createInsecure()
+    credentials
   );
 
   var request = new calc.PrimeNumberDecompositionRequest();
@@ -121,10 +125,7 @@ function callPrimeNumberDecomposition() {
 }
 
 function callLongGreeting() {
-  var client = new service.GreetServiceClient(
-    'localhost:50051',
-    grpc.credentials.createInsecure()
-  );
+  var client = new service.GreetServiceClient('localhost:50051', credentials);
 
   var request = new greets.LongGreetRequest();
 
@@ -158,7 +159,7 @@ function callLongGreeting() {
 function callComputeAverage() {
   var client = new calcService.CalculatorServiceClient(
     'localhost:50051',
-    grpc.credentials.createInsecure()
+    credentials
   );
 
   var request = new calc.ComputeAverageRequest();
@@ -204,10 +205,7 @@ async function sleep(interval) {
 async function callBiDirect() {
   console.log('Hello I am a gRPC client');
 
-  var client = new service.GreetServiceClient(
-    'localhost:50051',
-    grpc.credentials.createInsecure()
-  );
+  var client = new service.GreetServiceClient('localhost:50051', credentials);
 
   var call = client.greetEveryone(request, (error, response) => {
     console.log('Server Response: ' + response);
@@ -249,7 +247,7 @@ async function callBiDiFindMaximum() {
 
   var client = new calcService.CalculatorServiceClient(
     'localhost:50051',
-    grpc.credentials.createInsecure()
+    credentials
   );
 
   var call = client.findMaximum(request, (error, response) => {});
@@ -282,6 +280,48 @@ async function callBiDiFindMaximum() {
   call.end();
 }
 
+function getRPCDeadline(rpcType) {
+  timeAllowed = 5000;
+
+  switch (rpcType) {
+    case 1:
+      timeAllowed = 1000;
+      break;
+    case 2:
+      timeAllowed = 7000;
+      break;
+    default:
+      console.log('Invalid RPC Type: using default type');
+  }
+
+  return new Date(Date.now() + timeAllowed);
+}
+
+function doErrorCall() {
+  var deadline = getRPCDeadline(1);
+
+  console.log('Hello I am a gRPC client');
+
+  var client = new service.GreetServiceClient('localhost:50051', credentials);
+
+  var number = -1;
+  var squareRootRequest = new calc.squareRootRequest();
+
+  squareRootRequest.setNumber(number);
+
+  client.squareRoot(
+    squareRootRequest,
+    { deadline: deadline },
+    (error, response) => {
+      if (!error) {
+        console.log('Result: ', response.getNumberRoot());
+      } else {
+        console.error(error.message);
+      }
+    }
+  );
+}
+
 function main() {
   // callGreetings();
   // callSum();
@@ -290,7 +330,8 @@ function main() {
   // callLongGreeting();
   // callComputeAverage();
   // callBiDirect();
-  callBiDiFindMaximum();
+  // callBiDiFindMaximum();
+  doErrorCall();
 }
 
 main();
