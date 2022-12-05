@@ -5,13 +5,16 @@ var service = require('../server/protos/greet_grpc_pb');
 var calc = require('../server/protos/calculator_pb');
 var calcService = require('../server/protos/calculator_grpc_pb');
 
+var blogs = require('../server/protos/blog_pb');
+var blogService = require('../server/protos/blog_grpc_pb');
+
 let fs = require('fs');
 
-let credentials = grpc.credentials.createSsl(
-  fs.readFileSync('../certs/ca.crt'),
-  fs.readFileSync('../certs/client.key'),
-  fs.readFileSync('../certs/client.crt')
-);
+// let credentials = grpc.credentials.createSsl(
+//   fs.readFileSync('../certs/ca.crt'),
+//   fs.readFileSync('../certs/client.key'),
+//   fs.readFileSync('../certs/client.crt')
+// );
 
 let unSafeCredentials = grpc.credentials.createInsecure();
 
@@ -322,6 +325,123 @@ function doErrorCall() {
   );
 }
 
+function callListBlogs() {
+  var client = new blogService.BlogServiceClient(
+    'localhost:50051',
+    // credentials
+    grpc.credentials.createInsecure()
+  );
+
+  var emptyBlogRequest = new blogs.ListBlogRequest();
+
+  var call = client.listBlog(emptyBlogRequest, (error, response) => {});
+
+  call.on('data', (response) => {
+    console.log('client streaming response: ', response.getBlog().toString());
+  });
+
+  call.on('error', (error) => {
+    console.error(error);
+  });
+
+  call.on('end', () => {
+    console.log('Server is completed sending messages');
+  });
+}
+
+function callCreateBlog() {
+  var client = new blogService.BlogServiceClient(
+    'localhost:50051',
+    // credentials
+    grpc.credentials.createInsecure()
+  );
+
+  var blog = new blogs.Blog();
+  blog.setAuthor('Stephane');
+  blog.setTitle('My First Blog');
+  blog.setContent('Content of the first blog');
+
+  var blogRequest = new blogs.CreateBlogRequest();
+  blogRequest.setBlog(blog);
+
+  client.createBlog(blogRequest, (error, response) => {
+    if (!error) {
+      console.log('Blog has been created: ', response.toString());
+    } else {
+      console.error(error);
+    }
+  });
+}
+
+function callReadBlog() {
+  var client = new blogService.BlogServiceClient('localhost:50051', unsafCreds);
+
+  var readBlogRequest = new blogs.ReadBlogRequest();
+  readBlogRequest.setBlogId('6');
+
+  client.readBlog(readBlogRequest, (error, response) => {
+    if (!error) {
+      console.log('Found a blog ', response.toString());
+    } else {
+      if (error.code === grpc.status.NOT_FOUND) {
+        console.log('Not found');
+      } else {
+        //do something else...
+      }
+    }
+  });
+}
+
+function callUpdateBlog() {
+  var client = new blogService.BlogServiceClient('localhost:50051', unsafCreds);
+
+  var updateBlogRequest = new blogs.UpdateBlogRequest();
+
+  var newBlog = new blogs.Blog();
+
+  newBlog.setId('5');
+  newBlog.setAuthor('James Bond now');
+  newBlog.setTitle('Hello Up to date');
+  newBlog.setContent('This is great, again!');
+
+  updateBlogRequest.setBlog(newBlog);
+
+  console.log('Blog...', newBlog.toString());
+
+  client.updateBlog(updateBlogRequest, (error, response) => {
+    if (!error) {
+    } else {
+      if (error.code === grpc.status.NOT_FOUND) {
+        console.log('NOt found');
+      } else {
+      }
+    }
+  });
+}
+
+function callDeleteBlog() {
+  var client = new blogService.BlogServiceClient('localhost:50051', unsafCreds);
+
+  var deleteBlogRequest = new blogs.DeleteBlogRequest();
+  var blogId = '6';
+
+  deleteBlogRequest.setBlogId(blogId);
+
+  client.deleteBlog(deleteBlogRequest, (error, response) => {
+    if (!error) {
+      console.log('Deleted blog with id: ', response.toString());
+    } else {
+      if (error.code === grpc.status.NOT_FOUND) {
+        console.log('Not Found');
+      } else {
+        console.log('Sorry something went wrong');
+      }
+    }
+  });
+}
+
+var unsafCreds = grpc.credentials.createInsecure();
+
 function main() {
   // callGreetings();
   // callSum();
@@ -331,7 +451,12 @@ function main() {
   // callComputeAverage();
   // callBiDirect();
   // callBiDiFindMaximum();
-  doErrorCall();
+  // doErrorCall();
+  // callListBlogs();
+  // callCreateBlog();
+  // callReadBlog();
+  // callUpdateBlog();
+  callDeleteBlog();
 }
 
 main();
