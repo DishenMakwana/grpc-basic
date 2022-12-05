@@ -1,0 +1,17 @@
+{
+  "name": "grpc-basic",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "DISHEN MAKWANA",
+  "dependencies": {
+    "google-protobuf": "^3.21.2",
+    "grpc": "^1.24.11",
+    "nodemon": "^2.0.20"
+  },
+  "scripts": {
+    "server": "nodemon server/index.js",
+    "client": "nodemon client/client.js",
+    "gen:certs": "./scripts/gen_certs.sh",
+    "develop": "SERVER_PORT=50051 node index"
+  }
+}
